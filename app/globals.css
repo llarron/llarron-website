@@ -204,7 +204,7 @@ header.site-header {
 .desktop-nav {
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 26px;
 }
 
 .desktop-nav > a {
@@ -213,10 +213,22 @@ header.site-header {
   text-decoration: none;
   color: var(--ink);
   transition: color 0.2s;
+  line-height: 1;
 }
 
 .desktop-nav > a:hover {
   color: var(--clay);
+}
+
+.desktop-nav .btn {
+  min-height: 44px;
+  height: 44px;
+  padding: 0 22px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(24, 63, 55, 0.12);
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .menu {
@@ -480,17 +492,29 @@ header.site-header {
 .hero-copy > p {
   max-width: 620px;
   font-size: 19px;
+  margin-bottom: 26px;
 }
 
 .actions {
   display: flex;
   align-items: center;
   gap: 14px;
-  margin-top: 32px;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.actions .btn {
+  min-height: 52px;
+  height: 52px;
+  padding: 0 24px;
+  font-size: 15px;
+  line-height: 1;
 }
 
 .small {
-  font-size: 12px;
+  font-size: 12.5px;
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
 .art {
