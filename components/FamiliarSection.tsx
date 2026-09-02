@@ -1,3 +1,5 @@
+import ConsultationTrigger from "./ConsultationTrigger";
+
 export default function FamiliarSection() {
   return (
     <section className="section dark">
@@ -11,9 +13,9 @@ export default function FamiliarSection() {
             People often seek guidance when several parts of life feel
             connected, but difficult to untangle alone.
           </p>
-          <a className="btn light" href="#consultation">
+          <ConsultationTrigger className="btn light">
             Start a conversation
-          </a>
+          </ConsultationTrigger>
         </div>
 
         <div className="checks reveal">

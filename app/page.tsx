@@ -9,10 +9,12 @@ import AboutSection from "@/components/AboutSection";
 import FaqSection from "@/components/FaqSection";
 import ConsultationSection from "@/components/ConsultationSection";
 import Footer from "@/components/Footer";
+import ConsultationModal from "@/components/ConsultationModal";
+import { ConsultationModalProvider } from "@/context/ConsultationModalContext";
 
 export default function Home() {
   return (
-    <>
+    <ConsultationModalProvider>
       <ScrollReveal />
       <Header />
       <main id="main">
@@ -26,6 +28,7 @@ export default function Home() {
         <ConsultationSection />
       </main>
       <Footer />
-    </>
+      <ConsultationModal />
+    </ConsultationModalProvider>
   );
 }

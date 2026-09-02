@@ -1,4 +1,5 @@
 import Image from "next/image";
+import ConsultationTrigger from "./ConsultationTrigger";
 
 export default function HeroSection() {
   return (
@@ -15,9 +16,9 @@ export default function HeroSection() {
             numerology and holistic wellness.
           </p>
           <div className="actions">
-            <a className="btn primary" href="#consultation">
+            <ConsultationTrigger className="btn primary">
               Request a consultation &rarr;
-            </a>
+            </ConsultationTrigger>
             <a className="btn ghost" href="#guidance">
               Explore the approach
             </a>

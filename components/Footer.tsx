@@ -1,4 +1,5 @@
 import Image from "next/image";
+import ConsultationTrigger from "./ConsultationTrigger";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -23,7 +24,9 @@ export default function Footer() {
         <div className="footer-links">
           <a href="#guidance">Guidance</a>
           <a href="#faq">FAQs</a>
-          <a href="#consultation">Contact</a>
+          <ConsultationTrigger className="footer-link-btn">
+            Contact
+          </ConsultationTrigger>
         </div>
       </div>
     </footer>
