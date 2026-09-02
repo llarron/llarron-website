@@ -12,9 +12,9 @@ export default function Footer() {
             <Image
               src="/assets/llarron-logo.webp"
               alt="Llarron"
-              width={190}
-              height={100}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              width={180}
+              height={72}
+              style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }}
             />
           </a>
           <p>Life coaching · Vastu guidance · Numerology · Holistic wellness</p>

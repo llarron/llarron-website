@@ -78,7 +78,7 @@ export default function Header() {
               width={158}
               height={58}
               priority
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "left center" }}
             />
           </a>
 
@@ -133,7 +133,7 @@ export default function Header() {
               width={158}
               height={58}
               priority
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "left center" }}
             />
           </a>
           <button
