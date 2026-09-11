@@ -1,183 +1,92 @@
 "use client";
 
-import { useState, useRef, useEffect, FormEvent } from "react";
+import { useRef, useEffect } from "react";
 import { useConsultationModal } from "@/context/ConsultationModalContext";
-
-interface FormState {
-  name: string;
-  phone: string;
-  email: string;
-  interest: string;
-  message: string;
-  company: string; // Honeypot
-}
-
-const initialFormState: FormState = {
-  name: "",
-  phone: "",
-  email: "",
-  interest: "",
-  message: "",
-  company: "",
-};
+import { useConsultationForm } from "@/hooks/useConsultationForm";
 
 export default function ConsultationModal() {
   const { isModalOpen, closeModal } = useConsultationModal();
-  const [formData, setFormData] = useState<FormState>(initialFormState);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const {
+    formData,
+    errors,
+    isSubmitting,
+    submitError,
+    isSuccess,
+    handleChange,
+    handleSubmit,
+    handleReset,
+  } = useConsultationForm();
 
   const modalRef = useRef<HTMLDivElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const successRef = useRef<HTMLDivElement>(null);
+  const triggerElementRef = useRef<HTMLElement | null>(null);
 
-  // Close on Escape & trap scroll lock
+  // Focus restoration & Escape handling & Scroll lock & Focus trapping
   useEffect(() => {
     if (!isModalOpen) return;
+
+    // Save previous active element for focus restoration
+    if (document.activeElement instanceof HTMLElement) {
+      triggerElementRef.current = document.activeElement;
+    }
 
     document.body.classList.add("lock");
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         closeModal();
+        return;
+      }
+
+      // Focus trap
+      if (e.key === "Tab" && modalRef.current) {
+        const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input:not([tabindex="-1"]), select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const focusable = Array.from(focusableElements).filter(
+          (el) => el.offsetParent !== null && !el.hasAttribute("disabled")
+        );
+
+        if (focusable.length === 0) return;
+
+        const firstElement = focusable[0];
+        const lastElement = focusable[focusable.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === firstElement) {
+            e.preventDefault();
+            lastElement.focus();
+          }
+        } else {
+          if (document.activeElement === lastElement) {
+            e.preventDefault();
+            firstElement.focus();
+          }
+        }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
-    // Focus name input when modal opens
-    setTimeout(() => {
+
+    // Initial focus on name input
+    const timer = setTimeout(() => {
       nameInputRef.current?.focus();
     }, 100);
 
     return () => {
+      clearTimeout(timer);
       window.removeEventListener("keydown", handleKeyDown);
       document.body.classList.remove("lock");
+
+      // Restore focus to trigger element
+      if (triggerElementRef.current) {
+        triggerElementRef.current.focus();
+      }
     };
   }, [isModalOpen, closeModal]);
 
   if (!isModalOpen) return null;
-
-  const validateField = (name: keyof FormState, value: string): string => {
-    switch (name) {
-      case "name": {
-        const trimmed = value.trim();
-        if (trimmed.length < 2) {
-          return "Enter a valid name using letters.";
-        }
-        const nameRegex = /^[\p{L}\p{M}][\p{L}\p{M}\s.'’-]*$/u;
-        if (!nameRegex.test(trimmed) || /\d/.test(trimmed)) {
-          return "Enter a valid name using letters.";
-        }
-        return "";
-      }
-      case "phone": {
-        let digits = value.replace(/\D/g, "");
-        if (digits.length === 12 && digits.startsWith("91")) {
-          digits = digits.slice(2);
-        }
-        const phoneRegex = /^[6-9]\d{9}$/;
-        if (!phoneRegex.test(digits)) {
-          return "Enter a valid 10-digit Indian mobile number.";
-        }
-        return "";
-      }
-      case "email": {
-        const trimmed = value.trim();
-        if (!trimmed || trimmed.length > 254) {
-          return "Enter a valid email address.";
-        }
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-        if (!emailRegex.test(trimmed)) {
-          return "Enter a valid email address.";
-        }
-        return "";
-      }
-      case "interest": {
-        if (!value) {
-          return "Please choose an area of interest.";
-        }
-        return "";
-      }
-      case "message": {
-        if (value.trim().length > 600) {
-          return "Keep your message within 600 characters.";
-        }
-        return "";
-      }
-      default:
-        return "";
-    }
-  };
-
-  const handleChange = (field: keyof FormState, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-
-    if (errors[field] || hasAttemptedSubmit) {
-      const error = validateField(field, value);
-      setErrors((prev) => {
-        const next = { ...prev };
-        if (error) {
-          next[field] = error;
-        } else {
-          delete next[field];
-        }
-        return next;
-      });
-    }
-  };
-
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-
-    if (formData.company) return;
-
-    setHasAttemptedSubmit(true);
-
-    const fieldsToValidate: (keyof FormState)[] = [
-      "name",
-      "phone",
-      "email",
-      "interest",
-      "message",
-    ];
-
-    const newErrors: Record<string, string> = {};
-    let firstInvalidField: string | null = null;
-
-    for (const field of fieldsToValidate) {
-      const error = validateField(field, formData[field]);
-      if (error) {
-        newErrors[field] = error;
-        if (!firstInvalidField) {
-          firstInvalidField = field;
-        }
-      }
-    }
-
-    setErrors(newErrors);
-
-    if (firstInvalidField) {
-      const element = document.getElementById(`modal_${firstInvalidField}`);
-      element?.focus();
-      return;
-    }
-
-    setIsSuccess(true);
-    setTimeout(() => {
-      successRef.current?.focus();
-    }, 50);
-  };
-
-  const handleReset = () => {
-    setFormData(initialFormState);
-    setErrors({});
-    setHasAttemptedSubmit(false);
-    setIsSuccess(false);
-    setTimeout(() => {
-      nameInputRef.current?.focus();
-    }, 50);
-  };
 
   return (
     <div
@@ -215,18 +124,17 @@ export default function ConsultationModal() {
           <span className="eyebrow">Request a consultation</span>
           <h2 id="modalTitle">Tell Llarron what you’d like support with.</h2>
           <p>
-            Complete this short form to preview the enquiry experience. Nothing is
-            transmitted or stored.
+            Share your details and areas of interest. Our team will review your
+            enquiry and get in touch with you.
           </p>
         </div>
 
         <div id="modalFormView" hidden={isSuccess}>
-          <div className="demo">
-            <strong>Prototype notice:</strong> This is a demo form. No backend is
-            connected and no enquiry will be sent.
-          </div>
-
-          <form id="modalForm" noValidate onSubmit={handleSubmit}>
+          <form
+            id="modalForm"
+            noValidate
+            onSubmit={(e) => handleSubmit(e, "modal", successRef)}
+          >
             <div className="hidden-field" aria-hidden="true">
               <label htmlFor="modal_company">Leave empty</label>
               <input
@@ -239,6 +147,25 @@ export default function ConsultationModal() {
               />
             </div>
 
+            {submitError && (
+              <div
+                className="error"
+                role="alert"
+                style={{
+                  padding: "12px 16px",
+                  background: "#fff2f0",
+                  border: "1px solid #ffccc7",
+                  borderRadius: "10px",
+                  marginBottom: "16px",
+                  color: "#a8071a",
+                  fontSize: "13px",
+                  lineHeight: "1.4",
+                }}
+              >
+                {submitError}
+              </div>
+            )}
+
             <div className="form-grid">
               <div className="field">
                 <label htmlFor="modal_name">
@@ -249,7 +176,7 @@ export default function ConsultationModal() {
                   id="modal_name"
                   name="name"
                   autoComplete="name"
-                  maxLength={80}
+                  maxLength={60}
                   required
                   value={formData.name}
                   aria-invalid={errors.name ? "true" : "false"}
@@ -353,11 +280,15 @@ export default function ConsultationModal() {
               </div>
             </div>
 
-            <button className="btn primary submit" type="submit">
-              Validate demo enquiry
+            <button
+              className="btn primary submit"
+              type="submit"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Submitting..." : "Request consultation"}
             </button>
-            <p className="small center" style={{ marginTop: "10px" }}>
-              Demo only · No data is sent or saved
+            <p className="small center" style={{ marginTop: "12px" }}>
+              Please avoid sharing sensitive personal, medical or financial information.
             </p>
           </form>
         </div>
@@ -369,18 +300,24 @@ export default function ConsultationModal() {
           role="status"
           tabIndex={-1}
         >
-          <b>Form checked successfully.</b>
+          <b>Thank you for reaching out.</b>
           <p>
-            Your details passed local validation. Nothing was submitted because
-            this prototype has no backend.
+            Your enquiry has been received successfully.
           </p>
-          <div style={{ display: "flex", gap: "12px", justifyContent: "center", marginTop: "18px" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "12px",
+              justifyContent: "center",
+              marginTop: "18px",
+            }}
+          >
             <button
               className="btn ghost"
               type="button"
-              onClick={handleReset}
+              onClick={() => handleReset(nameInputRef)}
             >
-              Reset form
+              Submit another enquiry
             </button>
             <button
               className="btn primary"
