@@ -36,19 +36,3 @@ export const SignupSchema = z.object({
   
   return data;
 });
-
-export const UserDetailsQuerySchema = z.object({
-  range: z.enum(['today', 'yesterday', '7days', '1month', 'custom']).default('today'),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-  page: z.string().regex(/^\d+$/).default('1').transform(Number),
-  limit: z.string().regex(/^\d+$/).default('10').transform(Number),
-}).refine(data => {
-  if (data.range === 'custom') {
-    return !!data.startDate && !!data.endDate;
-  }
-  return true;
-}, {
-  message: "startDate and endDate are required when range is 'custom'",
-  path: ['range'],
-});

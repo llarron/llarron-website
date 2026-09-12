@@ -1,163 +1,22 @@
 "use client";
 
-import { useState, useRef, FormEvent } from "react";
-
-interface FormState {
-  name: string;
-  phone: string;
-  email: string;
-  interest: string;
-  message: string;
-  company: string; // Honeypot
-}
-
-const initialFormState: FormState = {
-  name: "",
-  phone: "",
-  email: "",
-  interest: "",
-  message: "",
-  company: "",
-};
+import { useRef } from "react";
+import { useConsultationForm } from "@/hooks/useConsultationForm";
 
 export default function ConsultationSection() {
-  const [formData, setFormData] = useState<FormState>(initialFormState);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const {
+    formData,
+    errors,
+    isSubmitting,
+    submitError,
+    isSuccess,
+    handleChange,
+    handleSubmit,
+    handleReset,
+  } = useConsultationForm();
 
   const nameInputRef = useRef<HTMLInputElement>(null);
   const successRef = useRef<HTMLDivElement>(null);
-
-  const validateField = (name: keyof FormState, value: string): string => {
-    switch (name) {
-      case "name": {
-        const trimmed = value.trim();
-        if (trimmed.length < 2) {
-          return "Enter a valid name using letters.";
-        }
-        // Support Unicode letters/marks and common name punctuation, reject numbers
-        const nameRegex = /^[\p{L}\p{M}][\p{L}\p{M}\s.'’-]*$/u;
-        if (!nameRegex.test(trimmed) || /\d/.test(trimmed)) {
-          return "Enter a valid name using letters.";
-        }
-        return "";
-      }
-      case "phone": {
-        let digits = value.replace(/\D/g, "");
-        if (digits.length === 12 && digits.startsWith("91")) {
-          digits = digits.slice(2);
-        }
-        const phoneRegex = /^[6-9]\d{9}$/;
-        if (!phoneRegex.test(digits)) {
-          return "Enter a valid 10-digit Indian mobile number.";
-        }
-        return "";
-      }
-      case "email": {
-        const trimmed = value.trim();
-        if (!trimmed || trimmed.length > 254) {
-          return "Enter a valid email address.";
-        }
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-        if (!emailRegex.test(trimmed)) {
-          return "Enter a valid email address.";
-        }
-        return "";
-      }
-      case "interest": {
-        if (!value) {
-          return "Please choose an area of interest.";
-        }
-        return "";
-      }
-      case "message": {
-        if (value.trim().length > 600) {
-          return "Keep your message within 600 characters.";
-        }
-        return "";
-      }
-      default:
-        return "";
-    }
-  };
-
-  const handleChange = (
-    field: keyof FormState,
-    value: string
-  ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-
-    // If an error exists for this field or submit was attempted, re-evaluate to clear or update
-    if (errors[field] || hasAttemptedSubmit) {
-      const error = validateField(field, value);
-      setErrors((prev) => {
-        const next = { ...prev };
-        if (error) {
-          next[field] = error;
-        } else {
-          delete next[field];
-        }
-        return next;
-      });
-    }
-  };
-
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-
-    // Honeypot check: reject silently if bot filled out honeypot
-    if (formData.company) {
-      return;
-    }
-
-    setHasAttemptedSubmit(true);
-
-    const fieldsToValidate: (keyof FormState)[] = [
-      "name",
-      "phone",
-      "email",
-      "interest",
-      "message",
-    ];
-
-    const newErrors: Record<string, string> = {};
-    let firstInvalidField: string | null = null;
-
-    for (const field of fieldsToValidate) {
-      const error = validateField(field, formData[field]);
-      if (error) {
-        newErrors[field] = error;
-        if (!firstInvalidField) {
-          firstInvalidField = field;
-        }
-      }
-    }
-
-    setErrors(newErrors);
-
-    if (firstInvalidField) {
-      const element = document.getElementById(firstInvalidField);
-      element?.focus();
-      return;
-    }
-
-    // Local-only validation passed
-    setIsSuccess(true);
-    setTimeout(() => {
-      successRef.current?.focus();
-    }, 50);
-  };
-
-  const handleReset = () => {
-    setFormData(initialFormState);
-    setErrors({});
-    setHasAttemptedSubmit(false);
-    setIsSuccess(false);
-    setTimeout(() => {
-      nameInputRef.current?.focus();
-    }, 50);
-  };
 
   return (
     <section className="section contact" id="consultation">
@@ -166,19 +25,18 @@ export default function ConsultationSection() {
           <span className="eyebrow">Request a consultation</span>
           <h2>Tell Llarron what you’d like support with.</h2>
           <p>
-            Complete this short form to preview the enquiry experience. Nothing is
-            transmitted or stored.
+            Share your details and areas of interest. Our team will review your
+            enquiry and get in touch with you.
           </p>
         </div>
 
         <div className="form-card reveal">
           <div id="formView" hidden={isSuccess}>
-            <div className="demo">
-              <strong>Prototype notice:</strong> This is a demo form. No backend is
-              connected and no enquiry will be sent.
-            </div>
-
-            <form id="form" noValidate onSubmit={handleSubmit}>
+            <form
+              id="form"
+              noValidate
+              onSubmit={(e) => handleSubmit(e, undefined, successRef)}
+            >
               <div className="hidden-field" aria-hidden="true">
                 <label htmlFor="company">Leave empty</label>
                 <input
@@ -191,6 +49,25 @@ export default function ConsultationSection() {
                 />
               </div>
 
+              {submitError && (
+                <div
+                  className="error"
+                  role="alert"
+                  style={{
+                    padding: "12px 16px",
+                    background: "#fff2f0",
+                    border: "1px solid #ffccc7",
+                    borderRadius: "10px",
+                    marginBottom: "16px",
+                    color: "#a8071a",
+                    fontSize: "13px",
+                    lineHeight: "1.4",
+                  }}
+                >
+                  {submitError}
+                </div>
+              )}
+
               <div className="form-grid">
                 <div className="field">
                   <label htmlFor="name">
@@ -201,7 +78,7 @@ export default function ConsultationSection() {
                     id="name"
                     name="name"
                     autoComplete="name"
-                    maxLength={80}
+                    maxLength={60}
                     required
                     value={formData.name}
                     aria-invalid={errors.name ? "true" : "false"}
@@ -305,10 +182,16 @@ export default function ConsultationSection() {
                 </div>
               </div>
 
-              <button className="btn primary submit" type="submit">
-                Validate demo enquiry
+              <button
+                className="btn primary submit"
+                type="submit"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Submitting..." : "Request consultation"}
               </button>
-              <p className="small center">Demo only · No data is sent or saved</p>
+              <p className="small center" style={{ marginTop: "12px" }}>
+                Please avoid sharing sensitive personal, medical or financial information.
+              </p>
             </form>
           </div>
 
@@ -319,18 +202,17 @@ export default function ConsultationSection() {
             role="status"
             tabIndex={-1}
           >
-            <b>Form checked successfully.</b>
+            <b>Thank you for reaching out.</b>
             <p>
-              Your details passed local validation. Nothing was submitted because
-              this prototype has no backend.
+              Your enquiry has been received successfully.
             </p>
             <button
               className="btn primary"
               id="reset"
               type="button"
-              onClick={handleReset}
+              onClick={() => handleReset(nameInputRef)}
             >
-              Return to form
+              Submit another enquiry
             </button>
           </div>
         </div>

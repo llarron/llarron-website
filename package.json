@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test:db-recovery": "tsx scripts/test-db-recovery.ts",
+    "test:e2e": "tsx scripts/test-e2e-api.ts",
+    "test:rollback": "tsx scripts/test-transaction-rollback.ts",
+    "db:init-indexes": "tsx scripts/ensure-indexes.ts"
   },
   "dependencies": {
     "date-fns-tz": "^3.2.0",
@@ -23,6 +27,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.3",
+    "tsx": "^4.23.13",
     "typescript": "^5"
   },
   "engines": {

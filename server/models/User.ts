@@ -20,7 +20,10 @@ const UserSchema: Schema = new Schema(
     timezone: { type: String, default: 'Asia/Kolkata' },
     status: { type: String, enum: ['ACTIVE', 'DELETED', 'ONHOLD'], default: 'ACTIVE' },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    autoIndex: process.env.NODE_ENV !== 'production',
+  }
 );
 
 // Indexes for fast querying (e.g., date ranges, email lookups)

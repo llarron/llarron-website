@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, DM_Sans } from "next/font/google";
+import UtmCapture from "@/components/UtmCapture";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -57,6 +58,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${fraunces.variable} ${dmSans.variable}`}>
       <body>
+        <UtmCapture />
         <a className="skip" href="#main">
           Skip to content
         </a>

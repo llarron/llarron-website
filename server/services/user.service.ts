@@ -1,15 +1,20 @@
 import { UserRepository } from '@/server/repositories/user.repository';
-import { SignupSchema, UserDetailsQuerySchema } from '@/server/validators/user.validator';
+import { SignupSchema } from '@/server/validators/user.validator';
 import { z } from 'zod';
-import UtmCampaign from '@/server/models/UtmCampaign';
-import { getDateRangeBounds } from '@/server/utils/timezone';
 import { logger } from '@/server/utils/logger';
+import mongoose from 'mongoose';
 
 export class UserService {
   constructor(private repository: UserRepository) {}
 
   async registerUser(data: z.infer<typeof SignupSchema>, clientIp?: string, userAgent?: string) {
-    const existingUser = await this.repository.findByEmailOrPhone(data.email, data.phone);
+    const { byEmail, byPhone } = await this.repository.findByEmailAndPhone(data.email, data.phone);
+
+    // Split match conflict detection: submitted email and phone belong to two different users
+    if (byEmail && byPhone && byEmail._id.toString() !== byPhone._id.toString()) {
+      logger.warn({ event: 'USER_CONFLICT' }, 'User details conflict with existing accounts');
+      throw new Error('USER_CONFLICT');
+    }
 
     const campaignData = {
       route: data.route,
@@ -47,105 +52,25 @@ export class UserService {
       timezone: data.timezone,
     };
 
+    const existingUser = byEmail || byPhone;
+
     if (existingUser) {
       // Multi-Touchpoint Tracking: add new campaign and update demographics
-      logger.info(`Existing user detected (${existingUser.email || existingUser.phone}), updating demographics and adding campaign`);
-      await this.repository.updateExistingUser(existingUser._id as any, userData, campaignData, consultationData);
+      logger.info({ event: 'EXISTING_USER_TOUCHPOINT' }, 'Existing user touchpoint recorded');
+      await this.repository.updateExistingUser(
+        existingUser._id as mongoose.Types.ObjectId,
+        userData,
+        campaignData,
+        consultationData
+      );
       
-      // Return the updated user object for the response
+      // Return updated demographics for response
       const updatedUser = { ...existingUser.toObject(), name: userData.name, interest: consultationData.interest, message: consultationData.message };
       return { user: updatedUser, status: 'existing' };
     }
 
-    logger.info(`Creating new user: ${data.email || data.phone}`);
+    logger.info({ event: 'NEW_USER_CREATED' }, 'New user record created');
     const newUser = await this.repository.createUser(userData, campaignData, consultationData);
     return { user: newUser, status: 'new' };
-  }
-
-  async getUserDetails(query: z.infer<typeof UserDetailsQuerySchema>) {
-    const { startDate, endDate, page, limit, range } = query;
-    const skip = (page - 1) * limit;
-
-    // Use timezone utility for accurate range bounding
-    const { start, end } = getDateRangeBounds(range, startDate, endDate, 'Asia/Kolkata');
-
-    const filter: any = {
-      createdAt: {
-        $gte: start,
-        $lte: end,
-      },
-    };
-
-    logger.info(`Fetching user details for range: ${range}, bounds: [${start.toISOString()} - ${end.toISOString()}]`);
-
-    // Query total count and campaigns concurrently for maximum performance
-    const [total, campaigns] = await Promise.all([
-      UtmCampaign.countDocuments(filter),
-      UtmCampaign.aggregate([
-      { $match: filter },
-      { $sort: { createdAt: -1, _id: -1 } },
-      { $skip: skip },
-      { $limit: limit },
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'userId',
-          foreignField: '_id',
-          as: 'user'
-        }
-      },
-      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
-      {
-        $lookup: {
-          from: 'consultations',
-          let: { searchUserId: '$userId' },
-          pipeline: [
-            { $match: { $expr: { $eq: ['$userId', '$$searchUserId'] } } },
-            { $sort: { createdAt: -1 } },
-            { $limit: 1 }
-          ],
-          as: 'consultation'
-        }
-      },
-      { $unwind: { path: '$consultation', preserveNullAndEmptyArrays: true } },
-      {
-        $addFields: {
-          userCreatedAt: "$user.createdAt",
-          utmCreatedAt: "$createdAt"
-        }
-      },
-      {
-        $replaceRoot: {
-          newRoot: {
-            $mergeObjects: [
-              "$user",
-              "$consultation",
-              "$$ROOT"
-            ]
-          }
-        }
-      },
-      {
-        $project: {
-          __v: 0,
-          updatedAt: 0,
-          createdAt: 0,
-          userId: 0,
-          user: 0,
-          consultation: 0
-        }
-      }
-    ])
-  ]);
-
-    return {
-      data: campaigns,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
   }
 }
